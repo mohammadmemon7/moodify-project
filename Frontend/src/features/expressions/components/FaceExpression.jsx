@@ -1,16 +1,16 @@
 import { useEffect, useRef, useState } from "react";
-import { detect,init } from "../utils/utils";
+import { detect, init } from "../utils/utils";
+import "../styles/FaceExpression.scss";
 
-
-export default function FaceExpression({onClick=()=>{}}) {
+export default function FaceExpression({ onClick = () => { } }) {
     const videoRef = useRef(null);
     const landmarkerRef = useRef(null);
     const streamRef = useRef(null);
 
-    const [ expression, setExpression ] = useState("Detecting...");
+    const [expression, setExpression] = useState("Detecting...");
 
     useEffect(() => {
-        init({landmarkerRef,videoRef,streamRef});
+        init({ landmarkerRef, videoRef, streamRef });
 
         return () => {
             if (landmarkerRef.current) {
@@ -26,19 +26,35 @@ export default function FaceExpression({onClick=()=>{}}) {
     }, []);
 
     async function handleClick() {
-        const expression =  await detect({landmarkerRef,videoRef,setExpression});
-        onClick(expression)
+        const expression = await detect({ landmarkerRef, videoRef, setExpression });
+        if (expression) {
+            onClick(expression)
+        }
     }
 
     return (
-        <div style={{ textAlign: "center" }}>
-            <video
-                ref={videoRef}
-                style={{ width: "400px", borderRadius: "12px" }}
-                playsInline
-            />
-            <h2>{expression}</h2>
-            <button onClick={handleClick} >Detect expression</button>
+        <div className="detector-card">
+            <div className="webcam-frame">
+                <video
+                    ref={videoRef}
+                    playsInline
+                />
+                <div className="corner tl"></div>
+                <div className="corner tr"></div>
+                <div className="corner bl"></div>
+                <div className="corner br"></div>
+                <div className="scan-line"></div>
+            </div>
+
+            <div className="detector-footer">
+                <div className="mood-label-display">
+                    <span className="label">DETECTED MOOD</span>
+                    <span className="expression-text">{expression}</span>
+                </div>
+                <button onClick={handleClick} className="detect-btn">
+                    Scan Mood
+                </button>
+            </div>
         </div>
     );
 }

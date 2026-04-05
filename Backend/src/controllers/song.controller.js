@@ -35,12 +35,25 @@ async function uploadSong(req,res) {
 
 async function getSong(req,res) {
     const {mood}=req.query
-    const song=await songModel.findOne({mood})
-
+    const songs=await songModel.find({mood})
+    if(!songs || songs.length===0){
+        return res.status(404).json({msg:"No songs found for this mood"})
+    }
+    const randomIndex=Math.floor(Math.random()*songs.length)
+    const song=songs[randomIndex]
     return res.status(200).json({
-        msg:"Song Fetched", 
+        msg:"Songs Fetched",
+        songs,
         song
     })
 }
 
-module.exports={uploadSong,getSong}
+async function getAllSongs(req,res){
+    const songs=await songModel.find({})
+    return res.status(200).json({
+        msg:"All songs fetched",
+        songs
+    })
+}
+
+module.exports={uploadSong,getSong,getAllSongs}

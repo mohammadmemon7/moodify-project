@@ -24,43 +24,70 @@ export const init = async ({ landmarkerRef, videoRef, streamRef }) => {
 
     streamRef.current = await navigator.mediaDevices.getUserMedia({ video: true });
     videoRef.current.srcObject = streamRef.current;
-    await videoRef.current.play();
+    
+    // Handle play() promise to avoid AbortError
+    try {
+        await new Promise((resolve) => {
+            videoRef.current.onloadedmetadata = () => {
+                resolve();
+            };
+        });
+        await videoRef.current.play();
+    } catch (err) {
+        console.warn("Video play was interrupted or failed:", err);
+    }
 };
 
 export const detect = ({ landmarkerRef, videoRef, setExpression }) => {
     if (!landmarkerRef.current || !videoRef.current) return;
 
-    const results = landmarkerRef.current.detectForVideo(
-        videoRef.current,
-        performance.now()
-    );
+    // Ensure video is ready and has valid dimensions to avoid MediaPipe ROI errors
+    if (
+        videoRef.current.readyState < 2 || 
+        videoRef.current.videoWidth === 0 || 
+        videoRef.current.videoHeight === 0
+    ) {
+        console.warn("Video not ready for detection");
+        return;
+    }
 
-    if (results.faceBlendshapes?.length > 0) {
-        const blendshapes = results.faceBlendshapes[ 0 ].categories;
+    try {
+        const results = landmarkerRef.current.detectForVideo(
+            videoRef.current,
+            performance.now()
+        );
 
-        const getScore = (name) =>
-            blendshapes.find((b) => b.categoryName === name)?.score || 0;
+        if (results.faceBlendshapes?.length > 0) {
+            const blendshapes = results.faceBlendshapes[0].categories;
 
-        const smileLeft = getScore("mouthSmileLeft");
-        const smileRight = getScore("mouthSmileRight");
-        const jawOpen = getScore("jawOpen");
-        const browUp = getScore("browInnerUp");
-        const frownLeft = getScore("mouthFrownLeft");
-        const frownRight = getScore("mouthFrownRight");
+            const getScore = (name) =>
+                blendshapes.find((b) => b.categoryName === name)?.score || 0;
 
-        console.log(getScore("mouthFrownLeft"))
+            const smileLeft = getScore("mouthSmileLeft");
+            const smileRight = getScore("mouthSmileRight");
+            const jawOpen = getScore("jawOpen");
+            const browUp = getScore("browInnerUp");
+            const frownLeft = getScore("mouthFrownLeft");
+            const frownRight = getScore("mouthFrownRight");
 
-        let currentExpression = "Neutral";
+            console.log("Frown score:", getScore("mouthFrownLeft"))
 
-        if (smileLeft > 0.5 && smileRight > 0.5) {
-            currentExpression = "happy";
-        } else if (jawOpen > 0.2 && browUp > 0.2) {
-            currentExpression = "surprised";
-        } else if (frownLeft > 0.0001 && frownRight > 0.0001) {
-            currentExpression = "sad";
+            let currentExpression = "Neutral";
+
+            if (smileLeft > 0.5 && smileRight > 0.5) {
+                currentExpression = "happy";
+            } else if (jawOpen > 0.2 && browUp > 0.2) {
+                currentExpression = "surprised";
+            } else if (frownLeft > 0.0001 && frownRight > 0.0001) {
+                currentExpression = "sad";
+            }
+
+            setExpression(currentExpression);
+            return currentExpression
+        } else {
+            setExpression("Face not detected");
         }
-
-        setExpression(currentExpression);
-        return currentExpression
+    } catch (err) {
+        console.error("MediaPipe detection failed:", err);
     }
 };

@@ -9,3 +9,8 @@ export async function getSongs({mood}) {
     const res=await api.get("?mood="+mood)
     return res.data
 }
+
+export async function getAllSongs() {
+    const res=await api.get("/all")
+    return res.data
+}

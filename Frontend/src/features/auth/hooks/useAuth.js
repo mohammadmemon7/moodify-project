@@ -13,16 +13,23 @@ export const useAuth=()=>{
             const data=await register({username,email,password})
             setuser(data.user)
         } catch (error) {
-            console.log(error)
+            console.error("Registration failed:", error.response?.data?.msg || error.message)
+            throw error
         } finally {
             setloading(false)
         }
     }
     async function handleLogin({username,email,password}) {
         setloading(true)
-        const data=await login({username,email,password})
-        setuser(data.user)
-        setloading(false)
+        try {
+            const data=await login({username,email,password})
+            setuser(data.user)
+        } catch (error) {
+            console.error("Login failed:", error.response?.data?.msg || error.message)
+            throw error // Re-throw so caller can handle if needed
+        } finally {
+            setloading(false)
+        }
     }
     async function handleGetme() {
         setloading(true)
@@ -30,15 +37,22 @@ export const useAuth=()=>{
             const data=await getMe()
             setuser(data.user)
         }catch(err){
+            // Normal behavior when not logged in, no need to log error
             setuser(null)
+        } finally {
+            setloading(false)
         }
-        setloading(false)
     }
     async function handleLogout() {
         setloading(true)
-        const data=await logout()
-        setuser(null)
-        setloading(false)
+        try {
+            await logout()
+            setuser(null)
+        } catch (error) {
+            console.error("Logout failed:", error.message)
+        } finally {
+            setloading(false)
+        }
     }
 
     useEffect(()=>{

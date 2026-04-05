@@ -1,6 +1,7 @@
 import React, { useContext, useRef, useState, useEffect } from 'react';
 import { SongContext } from '../song.context';
-import {useSong} from "../Hooks/useSong"
+import { useSong } from "../Hooks/useSong";
+import "../styles/Player.scss";
 
 const Player = () => {
     const { song } = useSong();
@@ -11,11 +12,22 @@ const Player = () => {
     const [playbackRate, setPlaybackRate] = useState(1);
 
     useEffect(() => {
+        const handleAutoplay = () => {
+            setIsPlaying(true);
+            if (audioRef.current) {
+                audioRef.current.play().catch(e => console.error("Autoplay failed:", e));
+            }
+        };
+
+        window.addEventListener('autoplay-song', handleAutoplay);
+        return () => window.removeEventListener('autoplay-song', handleAutoplay);
+    }, []);
+
+    useEffect(() => {
         if (song?.url && audioRef.current) {
             audioRef.current.load();
-            if (isPlaying) {
-                audioRef.current.play().catch(e => console.error("Auto-play failed:", e));
-            }
+            audioRef.current.play().catch(e => console.error("Auto-play failed:", e));
+            setIsPlaying(true);
         }
     }, [song]);
 
@@ -69,71 +81,54 @@ const Player = () => {
         return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
     };
 
-    if (!song) return <div>No song selected</div>;
+    if (!song) return null;
 
     return (
-        <div className="music-player" style={{
-            position: 'fixed',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            background: '#222',
-            color: '#fff',
-            padding: '10px 20px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            boxShadow: '0 -2px 10px rgba(0,0,0,0.3)',
-            zIndex: 1000
-        }}>
-            {/* Song Info */}
-            <div style={{ display: 'flex', alignItems: 'center', width: '30%' }}>
+        <div className="player-card">
+            <div className="player-artwork">
                 {song.posterurl && (
-                    <img 
-                        src={song.posterurl} 
-                        alt="Poster" 
-                        style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px', marginRight: '10px' }} 
+                    <img
+                        src={song.posterurl}
+                        alt="Poster"
                     />
                 )}
-                <div>
-                    <h4 style={{ margin: 0, fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {song.title || "Unknown Title"}
-                    </h4>
-                    <p style={{ margin: 0, fontSize: '12px', color: '#aaa' }}>{song.mood || "Unknown Mood"}</p>
+                <div className="artwork-overlay"></div>
+                <div className="mood-tag">
+                    {song.mood}
                 </div>
             </div>
 
-            {/* Controls */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '5px' }}>
-                    <button onClick={() => skipTime(-10)} style={btnStyle}>⏪ 10s</button>
-                    <button onClick={togglePlay} style={{ ...btnStyle, fontSize: '20px' }}>
-                        {isPlaying ? '⏸' : '▶'}
-                    </button>
-                    <button onClick={() => skipTime(10)} style={btnStyle}>10s ⏩</button>
-                </div>
-                
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%' }}>
-                    <span style={{ fontSize: '12px' }}>{formatTime(currentTime)}</span>
-                    <input
-                        type="range"
-                        min="0"
-                        max={duration || 0}
-                        value={currentTime}
-                        onChange={handleSeek}
-                        style={{ flex: 1, cursor: 'pointer' }}
-                    />
-                    <span style={{ fontSize: '12px' }}>{formatTime(duration)}</span>
+            <div className="player-info">
+                <h3 className="song-title">
+                    {song.title || "Unknown Title"}
+                </h3>
+            </div>
+
+            <div className="player-progress">
+                <input
+                    type="range"
+                    min="0"
+                    max={duration || 0}
+                    value={currentTime}
+                    onChange={handleSeek}
+                />
+                <div className="time-row">
+                    <span>{formatTime(currentTime)}</span>
+                    <span>{formatTime(duration)}</span>
                 </div>
             </div>
 
-            {/* Speed Control */}
-            <div style={{ width: '30%', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '10px' }}>
-                <label style={{ fontSize: '12px' }}>Speed:</label>
-                <select 
-                    value={playbackRate} 
+            <div className="player-controls">
+                <button onClick={() => skipTime(-10)} className="ctrl-btn">−10s</button>
+                <button onClick={togglePlay} className="ctrl-btn primary">
+                    {isPlaying ? '⏸' : '▶'}
+                </button>
+                <button onClick={() => skipTime(10)} className="ctrl-btn">+10s</button>
+
+                <select
+                    value={playbackRate}
                     onChange={changeSpeed}
-                    style={{ background: '#333', color: '#fff', border: '1px solid #555', padding: '2px 5px', borderRadius: '4px' }}
+                    className="speed-select"
                 >
                     <option value="0.5">0.5x</option>
                     <option value="1.0">1.0x</option>
@@ -152,15 +147,6 @@ const Player = () => {
             />
         </div>
     );
-};
-
-const btnStyle = {
-    background: 'none',
-    border: 'none',
-    color: '#fff',
-    cursor: 'pointer',
-    fontSize: '16px',
-    padding: '5px'
 };
 
 export default Player;
